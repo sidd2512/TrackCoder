@@ -1,0 +1,229 @@
+login 
+
+{
+    "message": "User logged in successfully",
+    "user": {
+        "_id": "674383edb0df388d9edc4505",
+        "email": "testuserLGC3@example.com",
+        "user_id": "testuserLGC3",
+        "name": "Test User 3",
+        "friends": [
+            {
+                "name": "vikash",
+                "leetcode_id": "6740cf5f23b0fa6580f5c9e0",
+                "gfg_id": "6740cf7323b0fa6580f5cb0f",
+                "_id": "6743884df5da3d4c35572d8c"
+            }
+        ],
+        "__v": 3,
+        "codechef_id": "673c4e6f68860b955a0ede24",
+        "leetcode_id": "673a2fd6beca70c3e8d13c2a"
+    },
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2NzQzODNlZGIwZGYzODhkOWVkYzQ1MDUiLCJ1c2VyX2lkIjoidGVzdHVzZXJMR0MzIiwiaWF0IjoxNzMyNzUxMjc2LCJleHAiOjE3MzI4Mzc2NzZ9.xyvYC_X37Ttypj48tS7hmaMkXNjJvuZcJngTCqI9RvY",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2NzQzODNlZGIwZGYzODhkOWVkYzQ1MDUiLCJ1c2VyX2lkIjoidGVzdHVzZXJMR0MzIiwiaWF0IjoxNzMyNzUxMjc2LCJleHAiOjE3MzQwNDcyNzZ9.dRyJ7SBYHshTUL0qcWYhNUKhsTrnjCBSIT1PHB47efk"
+}
+
+
+
+
+
+
+
+
+
+
+leader board
+http://localhost:5000/api/user/testuserLGC3/leaderboard
+
+{
+    "success": true,
+    "data": {
+        "user": {
+            "name": "Test User 3",
+            "user_id": "testuserLGC3",
+            "leetcode": {
+                "solved": 20,
+                "easy": 4,
+                "medium": 13,
+                "hard": 3,
+                "rating": 2000
+            },
+            "gfg": {
+                "solved": 0,
+                "easy": 0,
+                "medium": 0,
+                "hard": 0,
+                "rating": 0
+            },
+            "codechef": {
+                "solved": 75,
+                "rating": 1500
+            },
+            "totalSolved": 95
+        },
+        "friends": [
+            {
+                "name": "vikash",
+                "leetcode": {
+                    "solved": 242,
+                    "easy": 114,
+                    "medium": 116,
+                    "hard": 12,
+                    "rating": 2000
+                },
+                "gfg": {
+                    "solved": 105,
+                    "easy": 55,
+                    "medium": 45,
+                    "hard": 2,
+                    "rating": 1686
+                },
+                "codechef": {
+                    "solved": 0,
+                    "rating": 0
+                },
+                "totalSolved": 347
+            }
+        ]
+    }
+}
+
+
+user profile
+
+http://localhost:5000/api/user/testuserLGC3
+
+
+{
+    "_id": "674383edb0df388d9edc4505",
+    "email": "testuserLGC3@example.com",
+    "user_id": "testuserLGC3",
+    "name": "Test User 3",
+    "password": "$2b$10$c9Ev2cYSEN2cQL2Fl.0Eq.Qozeo0TBNy.wOwlDheDLfu5BpIlq7kS",
+    "friends": [
+        {
+            "name": "vikash",
+            "leetcode_id": "6740cf5f23b0fa6580f5c9e0",
+            "gfg_id": "6740cf7323b0fa6580f5cb0f",
+            "_id": "6743884df5da3d4c35572d8c"
+        }
+    ],
+    "__v": 3,
+    "codechef_id": "673c4e6f68860b955a0ede24",
+    "leetcode_id": "673a2fd6beca70c3e8d13c2a",
+    "leetcode_data": {
+        "_id": "673a2fd6beca70c3e8d13c2a",
+        "user_id": "siddharthcpn2512",
+        "total_solved": 20,
+        "easy": 4,
+        "medium": 13,
+        "hard": 3,
+        "rating": 2000,
+        "badge": "No Badge",
+        "question_solved": [ {
+                "_id": "673a21a8b6a134475f60b32a",
+                "title": "Two Sum",
+                "difficulty": "Easy",
+                "link": "https://leetcode.com/problems/two-sum/",
+                "id": "1",
+                "__v": 0
+            },
+            {
+                "_id": "673a21a8b6a134475f60b32d",
+                "title": "Add Two Numbers",
+                "difficulty": "Medium",
+                "link": "https://leetcode.com/problems/add-two-numbers/",
+                "id": "2",
+                "__v": 0
+            },],
+        "modifiedAt": "2024-11-24T14:23:22.703Z",
+        "__v": 0
+    },
+    "gfg_data": {
+         "_id": "673a2fd6beca70c3e84413c2a",
+        "user_id": "siddhart",
+        "total_solved": 20,
+        "easy": 4,
+        "medium": 13,
+        "hard": 3,
+        "rating": 2000,
+        "badge": "No Badge",
+        "question_solved": [{
+                "_id": "6733a21a8b6a1334475f60b32d",
+                "title": "Add three Numbers",
+                "difficulty": "Medium",
+                "link": "https://leetcode.com/problems/add-two-numbers/",
+                "id": "2",
+                "__v": 0
+            },]
+    },
+    "codechef_data": {
+        "_id": "673c4e6f68860b955a0ede24",
+        "user_id": "cc2k22",
+        "total_solved": 75,
+        "rating": 1500,
+        "badge": "No Badge",
+        "question_solved": [  
+          {
+                "_id": "673c4e6f68860b955a0edcf8",
+                "title": "PARTSCORE",
+                "link": "https://www.codechef.com/START156D/problems/PARTSCORE",
+                "__v": 0
+            },
+            {
+                "_id": "673c4e6f68860b955a0edcfb",
+                "title": "EVENHATE",
+                "link": "https://www.codechef.com/START156D/problems/EVENHATE",
+                "__v": 0
+            },
+        ],
+        "modifiedAt": "2024-11-24T14:25:15.910Z",
+        "__v": 0
+    }
+}
+
+
+
+friend profile
+http://localhost:5000/api/user/testuserLGC3/vikash
+
+{
+    "user": {
+        "userId": "testuserLGC3",
+        "name": "Test User 3",
+        "email": "testuserLGC3@example.com"
+    },
+    "friend": {
+        "_id": "6743884df5da3d4c35572d8c",
+        "name": "vikash",
+        "leetcode_data": {
+            "question_solved": [{
+                    "_id": "673a21a8b6a134475f60b32a",
+                    "title": "Two Sum",
+                    "difficulty": "Easy",
+                    "link": "https://leetcode.com/problems/two-sum/",
+                    "id": "1",
+                    "__v": 0
+                }, ]
+        },
+        "gfg_data": {
+            "question_solved": [{
+                    "_id": "673c30e077b702a0a148e5c5",
+                    "title": "Geek Jump",
+                    "difficulty": "Easy",
+                    "link": "https://practice.geeksforgeeks.org/problems/geek-jump/0",
+                    "__v": 0
+                },
+                {
+                    "_id": "673c30e077b702a0a148e5e6",
+                    "title": "Subset Sum Problem",
+                    "difficulty": "Medium",
+                    "link": "https://practice.geeksforgeeks.org/problems/subset-sum-problem-1611555638/0",
+                    "__v": 0
+                },]
+        },
+        "codechef_data": {
+            "question_solved": []
+        }
+    }
+}
