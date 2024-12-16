@@ -19,7 +19,10 @@ const UserSchema = new Schema({
     ],
     refreshToken: {
         type: String
-    }
+    },
+    contestRem:{type:Boolean,default:false},
+    FriendUpdate:{type:Boolean,default:true},
+    RemEmail:{type:String}
 });
 
 // Generate Access Token

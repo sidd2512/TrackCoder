@@ -97,6 +97,7 @@ export const getUserInfo = async (req, res) => {
   }
 };
 
+
 export const compareUserWithFriend = async (req, res) => {
   const { userId, friendname } = req.params;
 
