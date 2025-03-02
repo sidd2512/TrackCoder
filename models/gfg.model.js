@@ -8,7 +8,10 @@ const GFGSchema = new Schema({
   medium: { type: Number, default: 0 },
   hard: { type: Number, default: 0 },
   rating: { type: Number, default: 0 },
-  question_solved: [{ type: Schema.Types.ObjectId, ref: 'GFGQuestion' }],
+  question_solved: [{
+    question: { type: Schema.Types.ObjectId, ref: 'LeetCodeQuestion' },
+    solvedAt: { type: Date, default: Date.now }
+  }],
   modifiedAt:{type: Date}
 });
 

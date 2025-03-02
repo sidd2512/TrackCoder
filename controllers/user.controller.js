@@ -1,11 +1,11 @@
-
-
+import  fetchAndUpdatePlatformData  from '../utils/SraperHerper.js';
 import User from '../models/user.model.js';
 
 export const getUserInfo = async (req, res) => {
   const { user_id } = req.user;
 
   try {
+    // Fetch the current user data with platform info
     const user = await User.aggregate([
       {
         $match: {
@@ -45,7 +45,7 @@ export const getUserInfo = async (req, res) => {
       {
         $lookup: {
           from: 'leetcodequestions',
-          localField: 'leetcode_data.question_solved',
+          localField: 'leetcode_data.question_solved.question',
           foreignField: '_id',
           as: 'leetcode_data.question_solved',
         },
@@ -59,7 +59,7 @@ export const getUserInfo = async (req, res) => {
       {
         $lookup: {
           from: 'gfgquestions',
-          localField: 'gfg_data.question_solved',
+          localField: 'gfg_data.question_solved.question',
           foreignField: '_id',
           as: 'gfg_data.question_solved',
         },
@@ -73,13 +73,12 @@ export const getUserInfo = async (req, res) => {
       {
         $lookup: {
           from: 'codechefquestions',
-          localField: 'codechef_data.question_solved',
+          localField: 'codechef_data.question_solved.question',
           foreignField: '_id',
           as: 'codechef_data.question_solved',
         },
       },
       {
-        // Exclude the refreshToken field
         $project: {
           refreshToken: 0,
         },
@@ -90,10 +89,21 @@ export const getUserInfo = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    // Send the current user data immediately
     res.status(200).json(user[0]);
+    //console.log(user[0]);
+    
+
+    //now update the user info 
+   if(user[0].gfg_data.user_id) await fetchAndUpdatePlatformData(user[0].gfg_data.user_id, 'GFG');
+    if(user[0].leetcode_data.user_id) await fetchAndUpdatePlatformData(user[0].leetcode_data.user_id, 'LeetCode');
+    if(user[0].codechef_data.user_id) await fetchAndUpdatePlatformData(user[0].codechef_data.user_id, 'CodeChef');
+    
+    
+    
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Error fetching user data' });
+    console.error('Error in getUserInfo:', error);
+    res.status(500).json({ message: 'Error fetching user data', error: error.message });
   }
 };
 

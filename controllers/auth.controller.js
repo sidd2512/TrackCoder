@@ -67,7 +67,6 @@ export const registerUser = async (req, res) => {
 };
 
 // Login User
-
 export const loginUser = async (req, res) => {
   try { console.log('login route hit');
   
@@ -233,40 +232,14 @@ export const changePassword = async (req, res) => {
 };
 
 
-//userid change
-export const changeUserId = async (req, res) => {
-  const userId = req.user._id; // User ID from token
-  const { newUserId } = req.body;
-
-  try {
-    // Check if the new user ID is already taken
-    const existingUser = await User.findOne({ user_id: newUserId });
-    if (existingUser) {
-      return res.status(400).json({ message: 'The new user ID is already taken' });
-    }
-
-    // Update the user's user_id
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    user.user_id = newUserId;
-    await user.save();
-
-    res.status(200).json({ message: 'User ID updated successfully', user_id: user.user_id });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Failed to update user ID', error: error.message });
-  }
-};
 
 
 //update user profile
 export const updateUserProfile = async (req, res) => {
   const userId = req.user._id; // User ID from token
   const { name, user_id, leetcode_id, gfg_id, codechef_id } = req.body;
-
+  console.log('update route hit');
+  
   try {
     // Find the user
     const user = await User.findById(userId);

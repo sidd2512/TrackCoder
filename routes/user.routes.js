@@ -11,3 +11,4 @@ router.get('/:userId/:friendname', verifyToken,compareUserWithFriend);
 
 
 export default router;
+

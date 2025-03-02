@@ -23,13 +23,14 @@ export default async function getLeetCodeStats(username) {
         const totalSolved = easySolved + mediumSolved + hardSolved;
         const contestBadge = data.contestBadge || 'No Badge';
 
+
         // Filter only "Accepted" problems and map to desired format
         const problems =
             data.recentSubmissions
                 ?.filter((problem) => problem.statusDisplay === 'Accepted')
                 .map((problem) => ({
                     title: problem.title || '',
-                    difficulty: problem.difficulty || 'Unknown',
+                    difficulty: problem.difficulty || 'Medium',
                     link: problem.titleSlug
                         ? `https://leetcode.com/problems/${problem.titleSlug}/`
                         : '',
@@ -44,6 +45,7 @@ export default async function getLeetCodeStats(username) {
             mediumSolved,
             hardSolved,
             contestBadge,
+            
             rating: 2000, // Static rating, adjust if dynamic rating logic is added
             recentProblems: problems,
         };

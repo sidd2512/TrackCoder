@@ -9,8 +9,11 @@ const LeetCodeSchema = new Schema({
   hard: { type: Number, default: 0 },
   rating: { type: Number, default: 0 },
   badge: { type: String, default: 'No Badge' },
-  question_solved: [{ type: Schema.Types.ObjectId, ref: 'LeetCodeQuestion' },],
-  modifiedAt:{type: Date}
+  question_solved: [{
+    question: { type: Schema.Types.ObjectId, ref: 'LeetCodeQuestion' },
+    solvedAt: { type: Date, default: Date.now }
+  }],
+  modifiedAt: { type: Date }
 });
 
-export default  mongoose.model('LeetCode', LeetCodeSchema);
+export default mongoose.model('LeetCode', LeetCodeSchema);
