@@ -7,7 +7,7 @@ This repository contains the backend for the **Trackcoders** project, which prov
 ## Frontend Repository
 
 The frontend for this project is available at:
-[Frontend GitHub Repository](https://github.com/sidd2512/TrackCoder-Frontend/tree/main)
+[Frontend GitHub Repository](https://github.com/sidd2512/TrackCoder-Frontend)
 
 ## Features
 
