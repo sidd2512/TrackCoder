@@ -1,5 +1,6 @@
-import  fetchAndUpdatePlatformData  from '../utils/SraperHerper.js';
-import User from '../models/user.model.js';
+import fetchAndUpdatePlatformData from "../utils/SraperHerper.js";
+import User from "../models/user.model.js";
+import UpdateFriendData from "../utils/UpdateFriendData.js";
 
 export const getUserInfo = async (req, res) => {
   const { user_id } = req.user;
@@ -14,68 +15,68 @@ export const getUserInfo = async (req, res) => {
       },
       {
         $lookup: {
-          from: 'leetcodes',
-          localField: 'leetcode_id',
-          foreignField: '_id',
-          as: 'leetcode_data',
+          from: "leetcodes",
+          localField: "leetcode_id",
+          foreignField: "_id",
+          as: "leetcode_data",
         },
       },
       {
         $lookup: {
-          from: 'gfgs',
-          localField: 'gfg_id',
-          foreignField: '_id',
-          as: 'gfg_data',
+          from: "gfgs",
+          localField: "gfg_id",
+          foreignField: "_id",
+          as: "gfg_data",
         },
       },
       {
         $lookup: {
-          from: 'codechefs',
-          localField: 'codechef_id',
-          foreignField: '_id',
-          as: 'codechef_data',
+          from: "codechefs",
+          localField: "codechef_id",
+          foreignField: "_id",
+          as: "codechef_data",
         },
       },
       {
         $unwind: {
-          path: '$leetcode_data',
+          path: "$leetcode_data",
           preserveNullAndEmptyArrays: true,
         },
       },
       {
         $lookup: {
-          from: 'leetcodequestions',
-          localField: 'leetcode_data.question_solved.question',
-          foreignField: '_id',
-          as: 'leetcode_data.question_solved',
+          from: "leetcodequestions",
+          localField: "leetcode_data.question_solved.question",
+          foreignField: "_id",
+          as: "leetcode_data.question_solved",
         },
       },
       {
         $unwind: {
-          path: '$gfg_data',
+          path: "$gfg_data",
           preserveNullAndEmptyArrays: true,
         },
       },
       {
         $lookup: {
-          from: 'gfgquestions',
-          localField: 'gfg_data.question_solved.question',
-          foreignField: '_id',
-          as: 'gfg_data.question_solved',
+          from: "gfgquestions",
+          localField: "gfg_data.question_solved.question",
+          foreignField: "_id",
+          as: "gfg_data.question_solved",
         },
       },
       {
         $unwind: {
-          path: '$codechef_data',
+          path: "$codechef_data",
           preserveNullAndEmptyArrays: true,
         },
       },
       {
         $lookup: {
-          from: 'codechefquestions',
-          localField: 'codechef_data.question_solved.question',
-          foreignField: '_id',
-          as: 'codechef_data.question_solved',
+          from: "codechefquestions",
+          localField: "codechef_data.question_solved.question",
+          foreignField: "_id",
+          as: "codechef_data.question_solved",
         },
       },
       {
@@ -86,27 +87,43 @@ export const getUserInfo = async (req, res) => {
     ]);
 
     if (!user || user.length === 0) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
     }
 
     // Send the current user data immediately
     res.status(200).json(user[0]);
     //console.log(user[0]);
-    
 
-    //now update the user info 
-   if(user[0].gfg_data.user_id) await fetchAndUpdatePlatformData(user[0].gfg_data.user_id, 'GFG');
-    if(user[0].leetcode_data.user_id) await fetchAndUpdatePlatformData(user[0].leetcode_data.user_id, 'LeetCode');
-    if(user[0].codechef_data.user_id) await fetchAndUpdatePlatformData(user[0].codechef_data.user_id, 'CodeChef');
-    
-    
-    
+    //now update the user info
+    const promises = [];
+
+    if (user[0].gfg_data.user_id) {
+      promises.push(
+        fetchAndUpdatePlatformData(user[0].gfg_data.user_id, "GFG")
+      );
+    }
+    if (user[0].leetcode_data.user_id) {
+      promises.push(
+        fetchAndUpdatePlatformData(user[0].leetcode_data.user_id, "LeetCode")
+      );
+    }
+    if (user[0].codechef_data.user_id) {
+      promises.push(
+        fetchAndUpdatePlatformData(user[0].codechef_data.user_id, "CodeChef")
+      );
+    }
+
+    await Promise.all(promises);
+
+    await UpdateFriendData(user[0].friends);
+    console.log("User data updated successfully");
   } catch (error) {
-    console.error('Error in getUserInfo:', error);
-    res.status(500).json({ message: 'Error fetching user data', error: error.message });
+    console.error("Error in getUserInfo:", error);
+    res
+      .status(500)
+      .json({ message: "Error fetching user data", error: error.message });
   }
 };
-
 
 export const compareUserWithFriend = async (req, res) => {
   const { userId, friendname } = req.params;
@@ -176,26 +193,19 @@ export const compareUserWithFriend = async (req, res) => {
     if (!user || user.length === 0) {
       return res.status(404).json({ message: "User not found" });
     }
-   // console.log("Step 1: User fetched successfully:", user[0]);
 
-    // Step 2: Fetch friend data using aggregation
+    // Step 2: Fetch friend data including question_solved
     const friendData = await User.aggregate([
       { $unwind: "$friends" },
       { $match: { "friends.name": friendname } },
+
+      // Fetch leetcode, gfg, and codechef base data
       {
         $lookup: {
           from: "leetcodes",
           localField: "friends.leetcode_id",
           foreignField: "_id",
           as: "leetcode_data",
-        },
-      },
-      {
-        $lookup: {
-          from: "leetcodequestions",
-          localField: "leetcode_data.question_solved",
-          foreignField: "_id",
-          as: "leetcode_questions",
         },
       },
       {
@@ -208,50 +218,75 @@ export const compareUserWithFriend = async (req, res) => {
       },
       {
         $lookup: {
-          from: "gfgquestions",
-          localField: "gfg_data.question_solved",
-          foreignField: "_id",
-          as: "gfg_questions",
-        },
-      },
-      {
-        $lookup: {
           from: "codechefs",
           localField: "friends.codechef_id",
           foreignField: "_id",
           as: "codechef_data",
         },
       },
+
+      // Unwind platform data to access question_solved arrays
+      {
+        $unwind: {
+          path: "$leetcode_data",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $unwind: {
+          path: "$gfg_data",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $unwind: {
+          path: "$codechef_data",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      // Lookup question details for each platform
+      {
+        $lookup: {
+          from: "leetcodequestions",
+          localField: "leetcode_data.question_solved.question",
+          foreignField: "_id",
+          as: "leetcode_data.question_solved",
+        },
+      },
+      {
+        $lookup: {
+          from: "gfgquestions",
+          localField: "gfg_data.question_solved.question",
+          foreignField: "_id",
+          as: "gfg_data.question_solved",
+        },
+      },
       {
         $lookup: {
           from: "codechefquestions",
-          localField: "codechef_data.question_solved",
+          localField: "codechef_data.question_solved.question",
           foreignField: "_id",
-          as: "codechef_questions",
+          as: "codechef_data.question_solved",
         },
       },
-      {
-        $addFields: {
-          "leetcode_data.question_solved": "$leetcode_questions",
-          "gfg_data.question_solved": "$gfg_questions",
-          "codechef_data.question_solved": "$codechef_questions",
-        },
-      },
+
+      // Assemble and return
       {
         $project: {
           _id: "$friends._id",
           name: "$friends.name",
-          leetcode_data: { $arrayElemAt: ["$leetcode_data", 0] },
-          gfg_data: { $arrayElemAt: ["$gfg_data", 0] },
-          codechef_data: { $arrayElemAt: ["$codechef_data", 0] },
+          leetcode_data: 1,
+          gfg_data: 1,
+          codechef_data: 1,
         },
       },
     ]);
 
+    console.log(JSON.stringify(friendData, null, 2));
     if (!friendData || friendData.length === 0) {
       return res.status(404).json({ message: "Friend not found" });
     }
-    //console.log("Step 2: Friend data fetched successfully:", friendData);
 
     // Step 3: Combine user and friend data
     const result = {
@@ -259,24 +294,22 @@ export const compareUserWithFriend = async (req, res) => {
       friend: friendData[0], // Aggregation result for friend
     };
 
-   // console.log("Step 3: Final combined data:", result);
     res.status(200).json(result);
   } catch (error) {
     console.error("Error fetching comparison data:", error.message);
-    res.status(500).json({ message: "Error fetching comparison data", error: error.message });
+    res.status(500).json({
+      message: "Error fetching comparison data",
+      error: error.message,
+    });
   }
 };
 
-
-
-
-//for leaderboard 
+//for leaderboard
 
 export const getLeaderboard = async (req, res) => {
   try {
     const { userId } = req.params;
- 
-  
+
     const leaderboardData = await User.aggregate([
       {
         $match: {
@@ -346,9 +379,13 @@ export const getLeaderboard = async (req, res) => {
       },
       {
         $addFields: {
-          "friends.leetcode_data": { $arrayElemAt: ["$friends.leetcode_data", 0] },
+          "friends.leetcode_data": {
+            $arrayElemAt: ["$friends.leetcode_data", 0],
+          },
           "friends.gfg_data": { $arrayElemAt: ["$friends.gfg_data", 0] },
-          "friends.codechef_data": { $arrayElemAt: ["$friends.codechef_data", 0] },
+          "friends.codechef_data": {
+            $arrayElemAt: ["$friends.codechef_data", 0],
+          },
         },
       },
       {
@@ -438,36 +475,6 @@ export const getLeaderboard = async (req, res) => {
     });
   }
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // import mongoose from 'mongoose';
 // import User from '../models/user.model.js';

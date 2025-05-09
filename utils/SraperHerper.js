@@ -1,102 +1,139 @@
-///////////////////////
+import {
+  LeetCode,
+  CodeChef,
+  GFG,
+  LeetCodeQuestion,
+  GFGQuestion,
+  CodeChefQuestion,
+} from "../models/index.js";
 
-import { User, LeetCode, CodeChef, GFG, LeetCodeQuestion, GFGQuestion, CodeChefQuestion } from '../models/index.js';
-import { scrapeLeetCode, scrapeGFG, scrapeCodeChef } from '../Scrapers/index.js';
+import {
+  scrapeLeetCode,
+  scrapeGFG,
+  scrapeCodeChef,
+} from "../Scrapers/index.js";
 
-export default async function fetchAndUpdatePlatformData( platformId, platformType) {
+import redisClient from "../utils/redis.js";
+
+export default async function fetchAndUpdatePlatformData(
+  platformId,
+  platformType,
+  id = false
+) {
   let model, questionModel, scrapeFunction;
 
-  // Determine model, question model, and scrape function based on platformType
-  if (platformType === 'LeetCode') {
+  // Step 1: Resolve platform-specifics
+  if (platformType === "LeetCode") {
     model = LeetCode;
     questionModel = LeetCodeQuestion;
     scrapeFunction = scrapeLeetCode;
-  } else if (platformType === 'GFG') {
+  } else if (platformType === "GFG") {
     model = GFG;
     questionModel = GFGQuestion;
     scrapeFunction = scrapeGFG;
-  } else if (platformType === 'CodeChef') {
+  } else if (platformType === "CodeChef") {
     model = CodeChef;
     questionModel = CodeChefQuestion;
     scrapeFunction = scrapeCodeChef;
+  } else {
+    throw new Error("Invalid platform type");
   }
 
-  // const user = await User.findById(userId);
-  const existingData = await model.findOne({ user_id: platformId });
+  // Step 2: Get platform user data
+  // If id is true, we are using the user_id from the request body
+  let platformUserDoc;
+  if (id) platformUserDoc = await model.findById(platformId);
+  // Otherwise, we are using the user_id from the platformId
+  else platformUserDoc = await model.findOne({ user_id: platformId });
 
-  // Check if scraping is needed (if no data exists or last update was over 6 hours ago)
-  if (!existingData || (existingData && Date.now() - existingData.modifiedAt.getTime() >  60 * 60 * 1000)) {
-    let data;
-    try {
-      data = await scrapeFunction(platformId);
-      
-      // If no change in total solved, return existing data
-      if (existingData && existingData.total_solved >= data.totalSolved) {
-        console.log("No new problems solved; returning existing data");
-        return existingData._id;
-      }
+  const shouldScrape =
+    !platformUserDoc ||
+    Date.now() - platformUserDoc.modifiedAt.getTime() > 60 * 60 * 1000;
 
-      // Add new questions to the question model if they don't already exist
-      const questionSolvedData = existingData ? [...existingData.question_solved] : [];
-      for (let question of data.recentProblems) {
-        let existingQuestion = await questionModel.findOne({ title: question.title });
-        if (!existingQuestion) {
-          const newQuestion = new questionModel({
-            title: question.title,
-            difficulty: question.difficulty,
-            link: question.link,
-          });
-          existingQuestion = await newQuestion.save();
-        }
-        
-        // Check if this question is already in user's solved list
-        const isAlreadySolved = questionSolvedData.some(q => 
-          q.question.toString() === existingQuestion._id.toString()
-        );
-        
-        // Only add if not already solved
-        if (!isAlreadySolved) {
-          questionSolvedData.push({
-            question: existingQuestion._id,
-            solvedAt: question.timespan ? new Date(question.timespan * 1000) : new Date()
-          });
-        }
-      }
+  if (!shouldScrape) {
+    console.log("No scraping needed; data is fresh.");
+    return platformUserDoc._id;
+  }
 
-      // Prepare the platform data model
-      const platformData = {
-        user_id: platformId,
-        total_solved: data.totalSolved,
-        easy: data.easySolved,
-        medium: data.mediumSolved,
-        hard: data.hardSolved,
-        rating: data.rating,
-        question_solved: questionSolvedData,
-        modifiedAt: new Date()
-      };
+  try {
+    // Step 3: Scrape
+    console.log("Scraping data...", platformUserDoc);
+    let scraped;
+    if (platformUserDoc)
+      scraped = await scrapeFunction(platformUserDoc.user_id);
+    else scraped = await scrapeFunction(platformId);
 
-      // Save or update the platform data in the model
-      let savedData;
-      if (existingData) {
-        savedData = await model.findByIdAndUpdate(existingData._id, platformData, { new: true });
-      } else {
-        const newPlatformData = new model(platformData);
-        savedData = await newPlatformData.save();
-      }
+    // Step 4: Build Redis cache map of all questions
+    let redisKey = `${platformType}_questions`;
+    let allQuestions = await redisClient.hGetAll(redisKey); // { title: ObjectId }
 
-      // Update user's platform ID reference with saved platform data _id
-      // await User.findByIdAndUpdate(userId, { [`${platformType.toLowerCase()}_id`]: savedData._id });
-      return savedData._id;
-
-    } catch(err) {
-      console.error("Error while scraping:", err);
-      // In case of error, return existing data if available
-      return existingData ? existingData._id : null;
+    // Step 5: Convert to objectId map
+    const redisQuestionsMap = {};
+    for (const [title, id] of Object.entries(allQuestions)) {
+      redisQuestionsMap[title] = id;
     }
-  } else {
-    // await User.findByIdAndUpdate(userId, { [`${platformType.toLowerCase()}_id`]: existingData._id });
-    console.log("No scraping needed; data is up-to-date.");
-    return existingData._id ;
+
+    const newQuestionEntries = [];
+
+    for (let q of scraped.recentProblems) {
+      if (!redisQuestionsMap[q.title]) {
+        const newQuestion = await questionModel.create({
+          title: q.title,
+          difficulty: q.difficulty,
+          link: q.link,
+        });
+
+        // Save in Redis
+        await redisClient.hSet(redisKey, q.title, newQuestion._id.toString());
+        redisQuestionsMap[q.title] = newQuestion._id.toString();
+      }
+
+      newQuestionEntries.push({
+        _id: redisQuestionsMap[q.title],
+        solvedAt: q.timespan ? new Date(q.timespan * 1000) : new Date(),
+      });
+    }
+
+    // Step 6: Insert into platform user model
+    if (!platformUserDoc) {
+      platformUserDoc = new model({
+        user_id: platformId,
+        total_solved: 0,
+        easy: 0,
+        medium: 0,
+        hard: 0,
+        rating: 0,
+        question_solved: [],
+      });
+    }
+
+    // Build existing question _id set
+    const existingSet = new Set(
+      platformUserDoc.question_solved.map((q) => q.question.toString())
+    );
+
+    for (let q of newQuestionEntries) {
+      if (!existingSet.has(q._id)) {
+        platformUserDoc.question_solved.push({
+          question: q._id,
+          solvedAt: q.solvedAt,
+        });
+      }
+    }
+
+    // Step 7: Update stats
+    platformUserDoc.total_solved = scraped.totalSolved;
+    platformUserDoc.easy = scraped.easySolved;
+    platformUserDoc.medium = scraped.mediumSolved;
+    platformUserDoc.hard = scraped.hardSolved;
+    if (scraped.rating) platformUserDoc.rating = scraped.rating;
+    platformUserDoc.modifiedAt = new Date();
+
+    await platformUserDoc.save();
+    return platformUserDoc._id;
+  } catch (err) {
+    console.error("Error while scraping:", err);
+    return platformUserDoc ? platformUserDoc._id : null;
   }
 }
 
@@ -120,7 +157,7 @@ export default async function fetchAndUpdatePlatformData( platformId, platformTy
 //     questionModel = CodeChefQuestion;
 //     scrapeFunction = scrapeCodeChef;
 //   }
-  
+
 //   // Fetch user by ObjectId
 //   const user = await User.findById(userId);
 //   if (!user) {
@@ -151,7 +188,7 @@ export default async function fetchAndUpdatePlatformData( platformId, platformTy
 
 //     // Prepare platform data
 //     const platformData = {
-//       user_id: platformId, 
+//       user_id: platformId,
 //       total_solved: data.totalSolved,
 //       easy: data.easySolved,
 //       medium: data.mediumSolved,
@@ -173,4 +210,3 @@ export default async function fetchAndUpdatePlatformData( platformId, platformTy
 //     console.log('Data is fresh, no need to scrape');
 //   }
 // }
-

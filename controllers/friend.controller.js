@@ -1,26 +1,48 @@
-import User from '../models/user.model.js';
-import fetchAndUpdatePlatformData from '../utils/SraperHerper.js';
+import User from "../models/user.model.js";
+import fetchAndUpdatePlatformData from "../utils/SraperHerper.js";
 
-//Add friend 
+//Add friend
 export const addFriend = async (req, res) => {
   try {
     const { name, leetcodeId, gfgId, codechefId } = req.body;
+    console.log(req.body);
+    console.log(codechefId, gfgId, leetcodeId);
     const userId = req.user._id;
+    console.log(userId);
     // Find the user who is adding the friend
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: "User not found" });
     }
 
     // Fetch platform data references for the friend
     let leetcodeRef, gfgRef, codechefRef;
 
-
-    if(leetcodeId){
-      leetcodeRef = await fetchAndUpdatePlatformData(leetcodeId, 'LeetCode');
+    try {
+      const promises = [];
+      if (leetcodeId)
+        promises.push(
+          fetchAndUpdatePlatformData(leetcodeId, "LeetCode").then(
+            (result) => (leetcodeRef = result)
+          )
+        );
+      if (gfgId)
+        promises.push(
+          fetchAndUpdatePlatformData(gfgId, "GFG").then(
+            (result) => (gfgRef = result)
+          )
+        );
+      if (codechefId)
+        promises.push(
+          fetchAndUpdatePlatformData(codechefId, "CodeChef").then(
+            (result) => (codechefRef = result)
+          )
+        );
+      await Promise.all(promises);
+    } catch (error) {
+      console.error("Error fetching platform data:", error);
+      return res.status(500).json({ error: "Failed to fetch platform data" });
     }
-    if(gfgId) gfgRef = await fetchAndUpdatePlatformData(gfgId, 'GFG');
-    if(codechefId) codechefRef = await fetchAndUpdatePlatformData(codechefId, 'CodeChef');
 
     // Create a friend object
     const newFriend = {
@@ -34,13 +56,14 @@ export const addFriend = async (req, res) => {
     user.friends.push(newFriend);
     await user.save();
 
-    res.status(201).json({ message: 'Friend added successfully', friend: newFriend });
+    res
+      .status(200)
+      .json({ message: "Friend added successfully", friend: newFriend });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Failed to add friend' });
+    res.status(500).json({ error: "Failed to add friend" });
   }
 };
-
 
 //Remove friend
 export const removeFriend = async (req, res) => {
@@ -51,13 +74,17 @@ export const removeFriend = async (req, res) => {
     // Find the user
     const user = await User.findById(userId);
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
     }
 
-    // Check if the friend exists in the user's friend list -- it js findIndex,Splice 
-    const friendIndex = user.friends.findIndex((friend) => friend.name === name);
+    // Check if the friend exists in the user's friend list -- it js findIndex,Splice
+    const friendIndex = user.friends.findIndex(
+      (friend) => friend.name === name
+    );
     if (friendIndex === -1) {
-      return res.status(404).json({ message: 'Friend not found in your friend list' });
+      return res
+        .status(404)
+        .json({ message: "Friend not found in your friend list" });
     }
 
     // Remove the friend from the list
@@ -66,11 +93,13 @@ export const removeFriend = async (req, res) => {
     await user.save();
 
     res.status(200).json({
-      message: 'Friend removed successfully',
+      message: "Friend removed successfully",
       friends: user.friends, // Return updated friend list
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Failed to remove friend', error: error.message });
+    res
+      .status(500)
+      .json({ message: "Failed to remove friend", error: error.message });
   }
 };

@@ -1,3 +1,6 @@
 .env
 node_modules
 bin
+Scrapers\tempCodeRunnerFile.js
+sampleResponse.txt
+test.js

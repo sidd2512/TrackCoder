@@ -1,73 +1,111 @@
 import axios from 'axios';
 
-export default async function getLeetCodeStats(username) {
-    try {
-        const url = `https://alfa-leetcode-api.onrender.com/userProfile/${username}`;
-
-        const response = await axios.get(url, {
-            headers: {
-                'Content-Type': 'application/json',
-                'User-Agent': 'Mozilla/5.0',
-            },
-        });
-
-        const data = response.data;
-        if (!data) {
-            throw new Error('User data not found');
+export default async function getLeetCodeUserData(username) {
+    let profileData={
+        username: username || 'N/A',
+        totalSolved: 0,
+        easySolved: 0,
+        mediumSolved: 0,
+        hardSolved: 0,
+        contestBadge: 'No Badge',
+        rating: 0,
+        recentProblems: []
+      };
+      if (!username) {
+        return profileData;
+      }
+  // LeetCode GraphQL API endpoint
+  const LEETCODE_API = 'https://leetcode.com/graphql';
+  
+  const query = `
+    query getUserProfile($username: String!) {
+      matchedUser(username: $username) {
+        username
+        submitStats: submitStatsGlobal {
+          acSubmissionNum {
+            difficulty
+            count
+          }
         }
-
-        // Extract and validate the data fields
-        const easySolved = data.easySolved || 0;
-        const mediumSolved = data.mediumSolved || 0;
-        const hardSolved = data.hardSolved || 0; // Corrected the key casing
-        const totalSolved = easySolved + mediumSolved + hardSolved;
-        const contestBadge = data.contestBadge || 'No Badge';
-
-
-        // Filter only "Accepted" problems and map to desired format
-        const problems =
-            data.recentSubmissions
-                ?.filter((problem) => problem.statusDisplay === 'Accepted')
-                .map((problem) => ({
-                    title: problem.title || '',
-                    difficulty: problem.difficulty || 'Medium',
-                    link: problem.titleSlug
-                        ? `https://leetcode.com/problems/${problem.titleSlug}/`
-                        : '',
-                    timestamp: problem.timestamp || null,
-                })) || [];
-
-        // Return data in the desired format
-        return {
-            username: username || 'N/A',
-            totalSolved,
-            easySolved,
-            mediumSolved,
-            hardSolved,
-            contestBadge,
-            
-            rating: 2000, // Static rating, adjust if dynamic rating logic is added
-            recentProblems: problems,
-        };
-    } catch (error) {
-        console.error('Error fetching LeetCode data:', error.message);
-        if (error.response) {
-            console.error('Response data:', error.response.data);
-            console.error('Status code:', error.response.status);
+      }
+      recentAcSubmissionList(username: $username, limit: 20) {
+        title
+        titleSlug
+        timestamp
+      }
+      userContestRanking(username: $username) {
+        rating
+        badge {
+          name
         }
-        // Return a consistent error fallback structure
-        return {
-            username: username || 'N/A',
-            totalSolved: 0,
-            easySolved: 0,
-            mediumSolved: 0,
-            hardSolved: 0,
-            contestBadge: 'No Badge',
-            rating: 0,
-            recentProblems: [],
-        };
+      }
     }
+  `;
+
+  try {
+    const response = await axios.post(LEETCODE_API, {
+      query,
+      variables: { username },
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      }
+    });
+
+    if (response.data.errors) {
+      console.error('Error:', response.data.errors[0].message);
+      return null;
+    }
+
+    const data = response.data.data;
+    if (!data.matchedUser) {
+      return profileData;
+    }
+
+    // Extract solved counts by difficulty
+    let totalSolved = 0;
+    let easySolved = 0;
+    let mediumSolved = 0;
+    let hardSolved = 0;
+
+    data.matchedUser.submitStats.acSubmissionNum.forEach(stat => {
+      if (stat.difficulty === 'All') totalSolved = stat.count;
+      else if (stat.difficulty === 'Easy') easySolved = stat.count;
+      else if (stat.difficulty === 'Medium') mediumSolved = stat.count;
+      else if (stat.difficulty === 'Hard') hardSolved = stat.count;
+    });
+
+    // Process recent problems without difficulty
+    const recentProblems = data.recentAcSubmissionList.map(sub => ({
+      title: sub.title,
+      link: `https://leetcode.com/problems/${sub.titleSlug}/`,
+      timestamp: sub.timestamp.toString()
+    }));
+
+    return {
+      username: data.matchedUser.username,
+      totalSolved,
+      easySolved,
+      mediumSolved,
+      hardSolved,
+      contestBadge: data.userContestRanking?.badge?.name || 'No Badge',
+      rating: Math.round(data.userContestRanking?.rating || 0),
+      recentProblems
+    };
+
+  } catch (error) {
+    console.error('Request failed:', error.message);
+    return profileData;
+  }
 }
 
-// // Usage
-//getLeetCodeStats("vikashchaurasia290302").then((data) => console.log(data));
+// Example usage
+// async function main() {
+//   const username = 'siddharthcpn2512';
+//   const userData = await getLeetCodeUserData(username);
+  
+//   console.log(JSON.stringify(userData, null, 2));
+// }
+
+// main();

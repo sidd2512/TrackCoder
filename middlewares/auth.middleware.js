@@ -9,7 +9,7 @@ const JWT_SECRET = process.env.ACCESS_TOKEN_SECRET;
 export const verifyToken = (req, res, next) => {
   const token =  req.cookies?.accessToken ||  req.headers.cookie?.split('=')[1] || req.headers.authorization?.split(' ')[1];
     
-  console.log(token);
+ // console.log(token);
   
   if (!token) {
     console.log('token not available');

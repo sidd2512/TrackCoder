@@ -1,79 +1,86 @@
-import { chromium } from 'playwright';
+import * as cheerio from 'cheerio';
+import fetch from 'node-fetch';
 
 export default async function getCodeChefStats(username) {
-    const url = `https://www.codechef.com/users/${username}`;
+    if(!username) {
+        return {
+            username: 'N/A',
+            totalSolved: 0,
+            rating: 0,
+            contestBadge: 'No Badge',
+            recentProblems: []
+        };
+    }
+    const profileUrl = `https://www.codechef.com/users/${username}`;
+    const recentProblemsUrl = `https://www.codechef.com/recent/user?user_handle=${username}`;
 
     try {
-        // Launch the browser
-        const browser = await chromium.launch();  // Set headless to false for debugging
-        const page = await browser.newPage();
-
-        // Navigate to the CodeChef profile page
-        await page.goto(url, { waitUntil: 'networkidle', timeout: 120000 });
-
-        // Wait for the user profile container to ensure page load
-        await page.waitForSelector(".user-profile-container", { timeout: 120000 });
+        // Part 1: Fetch basic profile info using Cheerio
+        const profileResponse = await fetch(profileUrl);
+        if (!profileResponse.ok) throw new Error(`Profile fetch failed with status ${profileResponse.status}`);
+        
+        const profileHtml = await profileResponse.text();
+        const $ = cheerio.load(profileHtml);
 
         // Extract rating
-        const rating = await page.locator(".rating-number").textContent().then(text => parseInt(text.trim())).catch(() => 0);
+        const ratingText = $(".rating-number").first().text().trim();
+        const rating = ratingText ? parseInt(ratingText) : 0;
 
         // Extract total solved problems
-        const totalSolved = await page.locator(".rating-data-section.problems-solved h3").nth(3).textContent().then(text => {
-            const match = text.match(/\d+/);  // Extract number from text
-            return match ? parseInt(match[0]) : 0;
-        }).catch(() => 0);
+        const solvedText = $(".rating-data-section.problems-solved h3").eq(3).text();
+        const totalSolved = solvedText ? parseInt(solvedText.match(/\d+/)?.[0] || '0') : 0;
 
         // Extract badges
-        const badges = await page.$$eval(".widget.badges .badge .badge__title", badgeElements =>
-            badgeElements.map(badge => badge.textContent.trim())
-        );
+        const badges = $(".widget.badges .badge .badge__title").map((i, el) => $(el).text().trim()).get();
         const contestBadge = badges.length > 0 ? badges.join(', ') : 'No Badge';
 
-        // Initialize list for recent problems and start timer
+        // Part 2: Fetch recent problems using the API endpoint
+        let currentPage = 0;
+        let maxPages = 1;
         const recentProblems = [];
         const startTime = Date.now();
-        const maxTime = 60000; // Maximum time to keep loading new pages (60 seconds)
+        const maxTime = 60000; // Maximum time to keep fetching pages (60 seconds)
 
-        while ((Date.now() - startTime) < maxTime) {
-            // Wait for recent problems table content to load
-            await page.waitForSelector(".table-questions.content tbody", { timeout: 120000 });
-
-            // Extract current page problems
-            const pageProblems = await page.$$eval(".table-questions.content tbody tr", rows => {
-                return Array.from(rows).map(row => {
-                    const status = row.querySelector('td:nth-child(3) span')?.title || '';
-                    if (status.toLowerCase().includes('accepted')) {
-                        const time = row.querySelector('td:nth-child(1) .tooltiptext')?.innerText.trim() || '';
-                        const title = row.querySelector('td:nth-child(2) a')?.innerText.trim() || '';
-                        const link = row.querySelector('td:nth-child(2) a')?.getAttribute('href');
-                        const fullLink = link ? 'https://www.codechef.com' + link : null;
-
-                        return {
-                            title,
-                            time,
-                            link: fullLink
-                        };
-                    }
-                    return null; // Exclude non-accepted solutions
-                }).filter(Boolean); // Filter out null entries
-            });
-
-            // Add extracted problems to recentProblems
-            recentProblems.push(...pageProblems);
-
-            // Check if there is a "Next" button available
-            const nextButton = await page.$('a[onclick*="onload_getpage_recent_activity_user(\'next\');"]');
-if (!nextButton) break; // Exit if no "Next" button is found
-
-// Click the "Next" button to load the next page
-await nextButton.click();
+        while (currentPage < maxPages && (Date.now() - startTime) < maxTime) {
+            currentPage++;
+            const apiUrl = `${recentProblemsUrl}&page=${currentPage}`;
             
-            // Wait for the next page to load by waiting for the page number to change
-            await page.waitForTimeout(2500); // Small delay to give time for the page content to update
-        }
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) break;
 
-        // Close the browser
-        await browser.close();
+                const data = await response.json();
+                if (data.max_page) maxPages = data.max_page;
+
+                // Parse the HTML content from the API response
+                const problemsHtml = data.content || '';
+                const $$ = cheerio.load(problemsHtml);
+
+                // Extract problems from the current page
+                $$(".dataTable tbody tr").each((i, row) => {
+                    const result = $$(row).find("td:nth-child(3) span").text().trim();
+                    
+                    // Only include accepted solutions
+                    if (result.includes('(100)') || result.includes('AC') || result.includes('100')) {
+                        const time = $$(row).find(".tooltiptext").text().trim();
+                        const title = $$(row).find("td:nth-child(2) a").text().trim();
+                        const link = $$(row).find("td:nth-child(2) a").attr('href');
+                        const fullLink = link ? `https://www.codechef.com${link}` : null;
+
+                        if (title) {
+                            recentProblems.push({
+                                title,
+                                time,
+                                link: fullLink
+                            });
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error(`Error fetching page ${currentPage}:`, error.message);
+                break;
+            }
+        }
 
         // Return structured data
         return {
@@ -90,8 +97,4 @@ await nextButton.click();
 }
 
 // Usage example
-// getCodeChefStats("cc2k22").then(data => console.log(JSON.stringify(data, null, 2)));
-
-
-
 // getCodeChefStats("cc2k22").then(data => console.log(JSON.stringify(data, null, 2)));
