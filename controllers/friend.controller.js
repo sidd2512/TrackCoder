@@ -5,10 +5,9 @@ import fetchAndUpdatePlatformData from "../utils/SraperHerper.js";
 export const addFriend = async (req, res) => {
   try {
     const { name, leetcodeId, gfgId, codechefId } = req.body;
-    console.log(req.body);
-    console.log(codechefId, gfgId, leetcodeId);
+
     const userId = req.user._id;
-    console.log(userId);
+
     // Find the user who is adding the friend
     const user = await User.findById(userId);
     if (!user) {

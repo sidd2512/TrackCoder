@@ -92,8 +92,6 @@ export const loginUser = async (req, res) => {
     console.log("login route hit");
 
     const { email, password } = req.body;
-    console.log(email);
-    console.log(password);
 
     // Find user by email
     const user = await User.findOne({ email });
@@ -112,31 +110,29 @@ export const loginUser = async (req, res) => {
       user._id
     );
 
-    // Remove sensitive data before sending user details
-    const loggedInUser = await User.findById(user._id).select(
-      "-password -refreshToken"
-    );
-
-    // Set refresh token in secure cookie
-    const options = {
+    // Set cookies
+    const cookieOptions = {
       httpOnly: true,
       secure: true,
+      sameSite: "None", // required for cross-site cookies
     };
+
     res
       .status(200)
-      .cookie("accessToken", accessToken, options)
-      .cookie("refreshToken", refreshToken, options);
-
-    // Respond with access token and user details
-    console.log("loggin successfull");
-    return res.status(200).json({
-      message: "User logged in successfully",
-      user: loggedInUser,
-      accessToken,
-      refreshToken,
-    });
+      .cookie("accessToken", accessToken, cookieOptions)
+      .cookie("refreshToken", refreshToken, cookieOptions)
+      .json({
+        message: "User logged in successfully",
+        user: {
+          user_id: user.user_id,
+          name: user.name,
+          email: user.email,
+        },
+        accessToken,
+        refreshToken,
+      });
   } catch (error) {
-    console.error(error);
+    console.error("Login error:", error);
     res.status(500).json({ error: "Failed to log in" });
   }
 };
@@ -346,15 +342,5 @@ export const updateUserProfile = async (req, res) => {
 
 // Add a new route for token validation
 export const validateToken = async (req, res) => {
-  const token = req.cookies.accessToken; // Assuming token is stored in cookies
-  if (!token) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
-  try {
-    const user = jwt.verify(token, process.env.JWT_SECRET); // Verify token
-    res.json({ user });
-  } catch (err) {
-    res.status(401).json({ error: "Invalid token" });
-  }
+  res.status(200).json({ message: "Token is valid" });
 };

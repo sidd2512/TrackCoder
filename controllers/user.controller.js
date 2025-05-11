@@ -82,6 +82,8 @@ export const getUserInfo = async (req, res) => {
       {
         $project: {
           refreshToken: 0,
+          password: 0,
+          __v: 0,
         },
       },
     ]);
@@ -126,7 +128,9 @@ export const getUserInfo = async (req, res) => {
 };
 
 export const compareUserWithFriend = async (req, res) => {
-  const { userId, friendname } = req.params;
+  const { friendname } = req.params;
+  const { user_id } = req.user;
+  const userId = user_id; // Assuming user_id is the same as userId in the request
 
   try {
     // Step 1: Fetch user data without the question_solved array
@@ -283,7 +287,6 @@ export const compareUserWithFriend = async (req, res) => {
       },
     ]);
 
-    console.log(JSON.stringify(friendData, null, 2));
     if (!friendData || friendData.length === 0) {
       return res.status(404).json({ message: "Friend not found" });
     }
@@ -308,12 +311,11 @@ export const compareUserWithFriend = async (req, res) => {
 
 export const getLeaderboard = async (req, res) => {
   try {
-    const { userId } = req.params;
-
+    const { user_id } = req.user;
     const leaderboardData = await User.aggregate([
       {
         $match: {
-          user_id: userId,
+          user_id: user_id,
         },
       },
       {
@@ -475,91 +477,3 @@ export const getLeaderboard = async (req, res) => {
     });
   }
 };
-
-// import mongoose from 'mongoose';
-// import User from '../models/user.model.js';
-
-// export const getUserProfile = async (req, res) => {
-//   try {
-//     const { userId } = req.params; // Get `userId` from route params
-//      const user = await User.findOne({user_id:userId});
-//     const result = await User.aggregate([
-//       {
-//         $match: {
-//           _id: user._id
-//         },
-//       },
-//       {
-//         $lookup: {
-//           from: 'leetcodes',
-//           localField: 'leetcode_id',
-//           foreignField: '_id',
-//           as: 'leetcode_data',
-//         },
-//       },
-//       {
-//         $lookup: {
-//           from: 'gfgs',
-//           localField: 'gfg_id',
-//           foreignField: '_id',
-//           as: 'gfg_data',
-//         },
-//       },
-//       {
-//         $lookup: {
-//           from: 'codechefs',
-//           localField: 'codechef_id',
-//           foreignField: '_id',
-//           as: 'codechef_data',
-//         },
-//       },
-//       { $unwind: { path: '$leetcode_data', preserveNullAndEmptyArrays: true } },
-//       {
-//         $lookup: {
-//           from: 'leetcodequestions',
-//           localField: 'leetcode_data.question_solved',
-//           foreignField: '_id',
-//           as: 'leetcode_data.question_solved',
-//         },
-//       },
-//       { $unwind: { path: '$gfg_data', preserveNullAndEmptyArrays: true } },
-//       {
-//         $lookup: {
-//           from: 'gfgquestions',
-//           localField: 'gfg_data.question_solved',
-//           foreignField: '_id',
-//           as: 'gfg_data.question_solved',
-//         },
-//       },
-//       { $unwind: { path: '$codechef_data', preserveNullAndEmptyArrays: true } },
-//       {
-//         $lookup: {
-//           from: 'codechefquestions',
-//           localField: 'codechef_data.question_solved',
-//           foreignField: '_id',
-//           as: 'codechef_data.question_solved',
-//         },
-//       },
-//       {
-//         $group: {
-//           _id: '$_id',
-//           email: { $first: '$email' },
-//           userId: { $first: '$userId' },
-//           name: { $first: '$name' },
-//           leetcode_data: { $first: '$leetcode_data' },
-//           gfg_data: { $first: '$gfg_data' },
-//           codechef_data: { $first: '$codechef_data' },
-//         },
-//       },
-//     ]);
-
-//     if (result.length === 0) {
-//       return res.status(404).json({ message: 'User not found' });
-//     }
-
-//     res.status(200).json(result[0]);
-//   } catch (error) {
-//     console.error('Error fetching user profile:', error);
-//     res.status(500).json({ error: 'Internal server error' });
-//   }
-// };
