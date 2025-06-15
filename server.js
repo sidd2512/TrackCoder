@@ -31,12 +31,10 @@ import authRouter from "./routes/auth.routes.js";
 import friendRoutes from "./routes/friend.routes.js";
 import userRouter from "./routes/user.routes.js";
 
-app.get("/", (req, res) => {
+app.get("/api", (req, res) => {
   res.send("Welcome to the TrackCoder API");
 });
-app.get("/ping", (req, res) => {
-  res.send("pong");
-});
+
 app.use("/api/auth", authRouter);
 app.use("/api/friend", friendRoutes);
 app.use("/api/user", userRouter);
