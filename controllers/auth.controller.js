@@ -240,6 +240,11 @@ export const changePassword = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
+    if (user.email === "testuserLGC3@example.com") {
+      return res
+        .status(403)
+        .json({ message: "Guest user cannot update profile" });
+    }
 
     // Verify the current password
     const isPasswordValid = await bcrypt.compare(
@@ -267,6 +272,8 @@ export const changePassword = async (req, res) => {
 //update user profile
 export const updateUserProfile = async (req, res) => {
   const userId = req.user._id; // User ID from token
+  // check if it is guest user
+
   const { name, user_id, leetcode_id, gfg_id, codechef_id } = req.body;
   console.log("update route hit");
 
@@ -276,7 +283,11 @@ export const updateUserProfile = async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-
+    if (user.email === "testuserLGC3@example.com") {
+      return res
+        .status(403)
+        .json({ message: "Guest user cannot update profile" });
+    }
     // Update name if provided
     if (name) {
       user.name = name;
